@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option java_package = "com.example.grcp_demo.chatting";
+
+package chat;
+
+message Empty {
+
+}
+
+message ChatMessage {
+    string type = 1;
+    string message = 2;
+}
+
+service ChatRoom {
+    rpc ChatStream(stream ChatMessage) returns (stream ChatMessage) {};
+}
