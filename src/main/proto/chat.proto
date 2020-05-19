@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option java_package = "com.example.grcp_demo.chatting";
 
-package chat;
+package chatting;
 
 message Empty {
 
@@ -15,4 +15,6 @@ message ChatMessage {
 
 service ChatRoom {
     rpc ChatStream(stream ChatMessage) returns (stream ChatMessage) {};
+    rpc listen(Empty) returns (stream ChatMessage) {};
+    rpc onlySend(stream ChatMessage) returns (Empty) {};
 }

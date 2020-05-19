@@ -56,7 +56,7 @@ public class ChatClient {
     
             client.outStream.onCompleted();
         } catch (ParseException e) {
-            System.out.println( "Unexpected exception:" + e.getMessage() );
+            System.err.println( "Unexpected exception:" + e.getMessage() );
         }
     }
 
@@ -70,14 +70,12 @@ public class ChatClient {
         
             @Override
             public void onError(Throwable t) {
-                
+                System.err.println("Room disconnected.");
             }
         
             @Override
             public void onCompleted() {
-                if (ChatClient.this.outStream != null) {
-                    ChatClient.this.outStream.onCompleted();
-                }
+                System.out.println("Room closed.");
             }
         });
     }

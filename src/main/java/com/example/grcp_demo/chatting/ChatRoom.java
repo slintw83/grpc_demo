@@ -1,10 +1,15 @@
 package com.example.grcp_demo.chatting;
 
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.example.grcp_demo.chatting.ChatRoomGrpc;
 import com.example.grcp_demo.chatting.Chat.ChatMessage;
+import com.example.grcp_demo.chatting.Chat.Empty;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -23,6 +28,12 @@ public class ChatRoom {
     public ChatRoom(int port) {
         this.chatServer = new ChatServer();
         this.server = ServerBuilder.forPort(port).addService(this.chatServer).build();
+    }
+
+    public void waitForConnection() throws InterruptedException {
+        System.out.println("Waiting for client connection.");
+        this.chatServer.countDownLatch.await();
+        System.out.println("Client connected.");
     }
 
     public void start() throws IOException {
@@ -65,6 +76,7 @@ public class ChatRoom {
             String user = cmd.getOptionValue("u", "Admin");
             ChatRoom room = new ChatRoom(Integer.parseInt(cmd.getOptionValue("p", "8980")));
             room.start();
+            room.waitForConnection();
 
             while (true) {
                 String msg = System.console().readLine("Message: ");
@@ -74,16 +86,22 @@ public class ChatRoom {
             }
 
             room.blockUntilShutdown();
-        } catch (ParseException e) {
-            System.out.println( "Unexpected exception:" + e.getMessage() );
         }
+        catch (ParseException e) {
+            System.err.println( "Unexpected exception:" + e.getMessage() );
+        }
+        catch (InterruptedException e) {
+            System.err.println("Client could not connect.");
+        }        
     }
     
     private static class ChatServer extends ChatRoomGrpc.ChatRoomImplBase {
         private StreamObserver<ChatMessage> inStream;
+        public CountDownLatch countDownLatch = new CountDownLatch(1);
 
         @Override
         public StreamObserver<ChatMessage> chatStream(StreamObserver<ChatMessage> responseObserver) {
+            this.countDownLatch.countDown();
             this.inStream = responseObserver;
             return new StreamObserver<Chat.ChatMessage>() {
 
@@ -94,14 +112,26 @@ public class ChatRoom {
 
                 @Override
                 public void onError(Throwable t) {
-
+                    System.err.println("Client disconnected!");
                 }
 
                 @Override
                 public void onCompleted() {
-                    responseObserver.onCompleted();
+                    System.out.println("Client Exited!");
                 }
             };
+        }
+
+        @Override
+        public void listen(Empty request, StreamObserver<ChatMessage> responseObserver) {
+            // TODO Auto-generated method stub
+            super.listen(request, responseObserver);
+        }
+
+        @Override
+        public StreamObserver<ChatMessage> onlySend(StreamObserver<Empty> responseObserver) {
+            // TODO Auto-generated method stub
+            return super.onlySend(responseObserver);
         }
 
         public void send(String user, String message) {
